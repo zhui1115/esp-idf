@@ -1090,6 +1090,7 @@ struct mbedtls_ssl_context
 
     int in_msgtype;             /*!< record header: message type      */
     size_t in_msglen;           /*!< record header: message length    */
+    size_t in_remaining;           /*!< fragment remaining length   */
     size_t in_left;             /*!< amount of data read so far       */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     uint16_t in_epoch;          /*!< DTLS epoch for incoming records  */

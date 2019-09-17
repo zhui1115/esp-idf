@@ -2703,7 +2703,7 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
         return( 0 );
     }
 
-    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )
+    if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )  // TODO : detect packet not complete  return 0;
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
         return( ret );
@@ -2716,8 +2716,8 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
                                         MBEDTLS_SSL_ALERT_MSG_UNEXPECTED_MESSAGE );
         return( MBEDTLS_ERR_SSL_UNEXPECTED_MESSAGE );
     }
-
-    ssl->state++;
+    if(ssl->in_remaining == 0 )
+        ssl->state++; // TODO 
     ssl->client_auth = ( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST );
 
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "got %s certificate request",
@@ -2729,6 +2729,8 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
         ssl->keep_current_message = 1;
         goto exit;
     }
+
+    goto exit;
 
     /*
      *  struct {
@@ -2877,7 +2879,7 @@ static int ssl_parse_server_hello_done( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_HELLO_DONE );
     }
 
-    ssl->state++;
+    ssl->state++; 
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
