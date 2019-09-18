@@ -2702,7 +2702,7 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
         ssl->state++;
         return( 0 );
     }
-
+    int  is_fragment = (ssl->in_remaining > 0) ? 1:0;
     if( ( ret = mbedtls_ssl_read_record( ssl, 1 ) ) != 0 )  // TODO : detect packet not complete  return 0;
     {
         MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_read_record", ret );
@@ -2718,20 +2718,18 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
     }
     if(ssl->in_remaining == 0 )
         ssl->state++; // TODO 
-    ssl->client_auth = ( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST );
+    if(!is_fragment)    
+        ssl->client_auth = ( ssl->in_msg[0] == MBEDTLS_SSL_HS_CERTIFICATE_REQUEST );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "got %s certificate request",
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "got %s certificate request",
                         ssl->client_auth ? "a" : "no" ) );
 
-    if( ssl->client_auth == 0 )
+    if(ssl->in_remaining==0 )
     {
         /* Current message is probably the ServerHelloDone */
         ssl->keep_current_message = 1;
-        goto exit;
     }
-
     goto exit;
-
     /*
      *  struct {
      *      ClientCertificateType certificate_types<1..2^8-1>;
@@ -2756,94 +2754,94 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
      *  However, we still minimally parse the message to check it is at least
      *  superficially sane.
      */
-    buf = ssl->in_msg;
+//     buf = ssl->in_msg;
 
-    /* certificate_types */
+//     /* certificate_types */
     
-    if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
-    }
-    cert_type_len = buf[mbedtls_ssl_hs_hdr_len( ssl )];
-    n = cert_type_len;
- MBEDTLS_SSL_DEBUG_MSG( 1, ( "in_hslen %d  , mbedtls_ssl_hs_hdr_len( ssl ) %d, buf %d" ,ssl->in_hslen, mbedtls_ssl_hs_hdr_len( ssl ),n));
-    /*
-     * In the subsequent code there are two paths that read from buf:
-     *     * the length of the signature algorithms field (if minor version of
-     *       SSL is 3),
-     *     * distinguished name length otherwise.
-     * Both reach at most the index:
-     *    ...hdr_len + 2 + n,
-     * therefore the buffer length at this point must be greater than that
-     * regardless of the actual code path.
-     */
-    if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
-    }
+//     if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) )
+//     {
+//         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+//         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+//                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+//         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+//     }
+//     cert_type_len = buf[mbedtls_ssl_hs_hdr_len( ssl )];
+//     n = cert_type_len;
+//     MBEDTLS_SSL_DEBUG_MSG( 1, ( "in_hslen %d  , mbedtls_ssl_hs_hdr_len( ssl ) %d, buf %d" ,ssl->in_hslen, mbedtls_ssl_hs_hdr_len( ssl ),n));
+//     /*
+//      * In the subsequent code there are two paths that read from buf:
+//      *     * the length of the signature algorithms field (if minor version of
+//      *       SSL is 3),
+//      *     * distinguished name length otherwise.
+//      * Both reach at most the index:
+//      *    ...hdr_len + 2 + n,
+//      * therefore the buffer length at this point must be greater than that
+//      * regardless of the actual code path.
+//      */
+//     if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n )
+//     {
+//         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+//         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+//                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+//         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+//     }
 
-    /* supported_signature_algorithms */
-#if defined(MBEDTLS_SSL_PROTO_TLS1_2)
-    if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
-    {
-        size_t sig_alg_len = ( ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 1 + n] <<  8 )
-                             | ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n]       ) );
-#if defined(MBEDTLS_DEBUG_C)
-        unsigned char* sig_alg;
-        size_t i;
-#endif
+//     /* supported_signature_algorithms */
+// #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
+//     if( ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3 )
+//     {
+//         size_t sig_alg_len = ( ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 1 + n] <<  8 )
+//                              | ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n]       ) );
+// #if defined(MBEDTLS_DEBUG_C)
+//         unsigned char* sig_alg;
+//         size_t i;
+// #endif
 
-        /*
-         * The furthest access in buf is in the loop few lines below:
-         *     sig_alg[i + 1],
-         * where:
-         *     sig_alg = buf + ...hdr_len + 3 + n,
-         *     max(i) = sig_alg_len - 1.
-         * Therefore the furthest access is:
-         *     buf[...hdr_len + 3 + n + sig_alg_len - 1 + 1],
-         * which reduces to:
-         *     buf[...hdr_len + 3 + n + sig_alg_len],
-         * which is one less than we need the buf to be.
-         */
-        if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n + sig_alg_len )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-            mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                            MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-            return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
-        }
+//         /*
+//          * The furthest access in buf is in the loop few lines below:
+//          *     sig_alg[i + 1],
+//          * where:
+//          *     sig_alg = buf + ...hdr_len + 3 + n,
+//          *     max(i) = sig_alg_len - 1.
+//          * Therefore the furthest access is:
+//          *     buf[...hdr_len + 3 + n + sig_alg_len - 1 + 1],
+//          * which reduces to:
+//          *     buf[...hdr_len + 3 + n + sig_alg_len],
+//          * which is one less than we need the buf to be.
+//          */
+//         if( ssl->in_hslen <= mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n + sig_alg_len )
+//         {
+//             MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+//             mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+//                                             MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+//             return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+//         }
 
-#if defined(MBEDTLS_DEBUG_C)
-        sig_alg = buf + mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n;
-        for( i = 0; i < sig_alg_len; i += 2 )
-        {
-            MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Signature Algorithm found: %d"
-                                        ",%d", sig_alg[i], sig_alg[i + 1]  ) );
-        }
-#endif
+// #if defined(MBEDTLS_DEBUG_C)
+//         sig_alg = buf + mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n;
+//         for( i = 0; i < sig_alg_len; i += 2 )
+//         {
+//             MBEDTLS_SSL_DEBUG_MSG( 3, ( "Supported Signature Algorithm found: %d"
+//                                         ",%d", sig_alg[i], sig_alg[i + 1]  ) );
+//         }
+// #endif
 
-        n += 2 + sig_alg_len;
-    }
-#endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
+//         n += 2 + sig_alg_len;
+//     }
+// #endif /* MBEDTLS_SSL_PROTO_TLS1_2 */
 
-    /* certificate_authorities */
-    dn_len = ( ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 1 + n] <<  8 )
-             | ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n]       ) );
+//     /* certificate_authorities */
+//     dn_len = ( ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 1 + n] <<  8 )
+//              | ( buf[mbedtls_ssl_hs_hdr_len( ssl ) + 2 + n]       ) );
 
-    n += dn_len;
-    if( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
-        mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
-                                        MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
-        return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
-    }
+//     n += dn_len;
+//     if( ssl->in_hslen != mbedtls_ssl_hs_hdr_len( ssl ) + 3 + n )
+//     {
+//         MBEDTLS_SSL_DEBUG_MSG( 1, ( "bad certificate request message" ) );
+//         mbedtls_ssl_send_alert_message( ssl, MBEDTLS_SSL_ALERT_LEVEL_FATAL,
+//                                         MBEDTLS_SSL_ALERT_MSG_DECODE_ERROR );
+//         return( MBEDTLS_ERR_SSL_BAD_HS_CERTIFICATE_REQUEST );
+//     }
 
 exit:
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= parse certificate request" ) );

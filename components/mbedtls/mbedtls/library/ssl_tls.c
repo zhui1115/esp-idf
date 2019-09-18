@@ -2772,8 +2772,9 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
     {
         MBEDTLS_SSL_DEBUG_MSG( 2, ( "message length: %d, out_left: %d",
                        mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen, ssl->out_left ) );
-
+        
         buf = ssl->out_hdr - ssl->out_left;
+        MBEDTLS_SSL_DEBUG_BUF( 2, "out_hdr", buf, mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen > 9 ? 9:mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen);
         ret = ssl->f_send( ssl->p_bio, buf, ssl->out_left );
 
         MBEDTLS_SSL_DEBUG_RET( 2, "ssl->f_send", ret );
@@ -3620,22 +3621,21 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
     }
 
     if(ssl->in_remaining>0){
-        size_t junk_data_length = ssl->in_msglen - ssl->in_remaining;
-        size_t useful_data_length = ssl->in_msglen - ssl->in_remaining;
+        // size_t junk_data_length = ssl->in_msglen - ssl->in_remaining;
+        // size_t useful_data_length = ssl->in_msglen - ssl->in_remaining;
         if(ssl->in_msglen - ssl->in_remaining > 0 ){
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "move memroy by %d, %d left",ssl->in_remaining,ssl->in_msglen - ssl->in_remaining));
-                  memmove( ssl->in_msg, ssl->in_msg + ssl->in_remaining,
-                      ssl->in_msglen - ssl->in_remaining );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "move memroy by %d, %d left",ssl->in_remaining,ssl->in_msglen - ssl->in_remaining));
+        memmove( ssl->in_msg, ssl->in_msg + ssl->in_remaining, ssl->in_msglen - ssl->in_remaining );
+            ssl->in_msglen = ssl->in_msglen - ssl->in_remaining;
             ssl->in_remaining = 0;
         }else{ // we dont have useful data here;
             ssl->in_remaining = ssl->in_msglen - ssl->in_remaining;
-                    ssl->in_hslen=0;
-        ssl->in_msglen =0;   
-        return (0);
+            ssl->in_msglen =0;   
+            return (0);
         }   
     }
     ssl->in_hslen = mbedtls_ssl_hs_hdr_len( ssl ) + ssl_get_hs_total_len( ssl );
-
+    MBEDTLS_SSL_DEBUG_BUF( 2, "msg_header", ssl->in_msg, 4 );
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake message: msglen ="
                         " %d, type = %d, hslen = %d transport = %d",
                         ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen,ssl->conf->transport ) );
