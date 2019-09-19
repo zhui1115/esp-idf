@@ -917,8 +917,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                                       ssl->conf->min_minor_ver,
                                       ssl->conf->max_minor_ver ) != 0 )
             continue;
-
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, add ciphersuite: %04x",
+        if(ciphersuites[i]!=0x3c)  continue;
+        MBEDTLS_SSL_DEBUG_MSG( 2, ( "client hello, add ciphersuite: %04x",
                                     ciphersuites[i] ) );
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
@@ -1728,8 +1728,8 @@ static int ssl_parse_server_hello( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 3, ( "%s session has been resumed",
                    ssl->handshake->resume ? "a" : "no" ) );
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, chosen ciphersuite: %04x", i ) );
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "server hello, compress alg.: %d", buf[37 + n] ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "server hello, chosen ciphersuite: %04x", i ) );
+    MBEDTLS_SSL_DEBUG_MSG( 2, ( "server hello, compress alg.: %d", buf[37 + n] ) );
 
     /*
      * Perform cipher suite validation in same way as in ssl_write_client_hello.

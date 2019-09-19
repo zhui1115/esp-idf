@@ -514,20 +514,20 @@ static void https_with_invalid_url(void)
 
 static void http_test_task(void *pvParameters)
 {
-    http_rest_with_url();
-    http_rest_with_hostname_path();
-    http_auth_basic();
-    http_auth_basic_redirect();
-    http_auth_digest();
-    http_relative_redirect();
-    http_absolute_redirect();
-    https_with_url();
-    https_with_hostname_path();
-    http_redirect_to_https();
-    http_download_chunk();
-    http_perform_as_stream_reader();
-    https_async();
-    https_with_invalid_url();
+    // http_rest_with_url();
+    // http_rest_with_hostname_path();
+    // http_auth_basic();
+    // http_auth_basic_redirect();
+    // http_auth_digest();
+    // http_relative_redirect();
+    // http_absolute_redirect();
+     https_with_url();
+    // https_with_hostname_path();
+    // http_redirect_to_https();
+    // http_download_chunk();
+    // http_perform_as_stream_reader();
+    // https_async();
+    // https_with_invalid_url();
 
     ESP_LOGI(TAG, "Finish http example");
     vTaskDelete(NULL);

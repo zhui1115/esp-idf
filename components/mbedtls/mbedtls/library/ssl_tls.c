@@ -2738,7 +2738,9 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             ssl->in_left += ret;
         }
     }
-
+    if(ssl->in_msglen!=0) {
+         MBEDTLS_SSL_DEBUG_BUF( 2, "input msg", ssl->in_msg ,ssl->in_msglen);       
+    }
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= fetch input" ) );
 
     return( 0 );
@@ -2774,7 +2776,8 @@ int mbedtls_ssl_flush_output( mbedtls_ssl_context *ssl )
                        mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen, ssl->out_left ) );
         
         buf = ssl->out_hdr - ssl->out_left;
-        MBEDTLS_SSL_DEBUG_BUF( 2, "out_hdr", buf, mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen > 9 ? 9:mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen);
+        // MBEDTLS_SSL_DEBUG_BUF( 2, "out_hdr", buf, mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen > 9 ? 9:mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen);
+        MBEDTLS_SSL_DEBUG_BUF( 2, "output msg", buf,mbedtls_ssl_hdr_len( ssl ) + ssl->out_msglen);
         ret = ssl->f_send( ssl->p_bio, buf, ssl->out_left );
 
         MBEDTLS_SSL_DEBUG_RET( 2, "ssl->f_send", ret );
@@ -3635,10 +3638,10 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
         }   
     }
     ssl->in_hslen = mbedtls_ssl_hs_hdr_len( ssl ) + ssl_get_hs_total_len( ssl );
-    MBEDTLS_SSL_DEBUG_BUF( 2, "msg_header", ssl->in_msg, 4 );
     MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake message: msglen ="
-                        " %d, type = %d, hslen = %d transport = %d",
-                        ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen,ssl->conf->transport ) );
+                        " %d, type = %d, hslen = %d ",
+                        ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen));
+
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM )
@@ -4077,6 +4080,9 @@ static int ssl_parse_record_header( mbedtls_ssl_context *ssl )
                         "version = [%d:%d], msglen = %d",
                         ssl->in_msgtype,
                         major_ver, minor_ver, ssl->in_msglen ) );
+
+    
+    
 
     /* Check record type */
     if( ssl->in_msgtype != MBEDTLS_SSL_MSG_HANDSHAKE &&
