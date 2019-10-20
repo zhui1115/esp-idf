@@ -173,7 +173,7 @@ void mbedtls_debug_print_buf( const mbedtls_ssl_context *ssl, int level,
     memset( txt, 0, sizeof( txt ) );
     for( i = 0; i < len; i++ )
     {
-        if( i >= 16384 )
+        if( i >= 1024 )
             break;
 
         if( i % 16 == 0 )

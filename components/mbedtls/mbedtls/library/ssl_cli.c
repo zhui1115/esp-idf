@@ -917,8 +917,7 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                                       ssl->conf->min_minor_ver,
                                       ssl->conf->max_minor_ver ) != 0 )
             continue;
-        if(ciphersuites[i]!=0x3c)  continue;
-        MBEDTLS_SSL_DEBUG_MSG( 2, ( "client hello, add ciphersuite: %04x",
+        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, add ciphersuite: %04x",
                                     ciphersuites[i] ) );
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
@@ -2577,7 +2576,7 @@ start_processing:
             return( MBEDTLS_ERR_SSL_BAD_HS_SERVER_KEY_EXCHANGE );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "signature", p, sig_len );
+        MBEDTLS_SSL_DEBUG_BUF( 2, "signature", p, sig_len );
 
         /*
          * Compute the hash that has been signed
@@ -2613,7 +2612,7 @@ start_processing:
             return( MBEDTLS_ERR_SSL_INTERNAL_ERROR );
         }
 
-        MBEDTLS_SSL_DEBUG_BUF( 3, "parameters hash", hash, hashlen );
+        MBEDTLS_SSL_DEBUG_BUF( 2, "parameters hash", hash, hashlen );
 
         if( ssl->session_negotiate->peer_cert == NULL )
         {
@@ -2724,11 +2723,11 @@ static int ssl_parse_certificate_request( mbedtls_ssl_context *ssl )
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "got %s certificate request",
                         ssl->client_auth ? "a" : "no" ) );
 
-    if(ssl->in_remaining==0 )
-    {
-        /* Current message is probably the ServerHelloDone */
-        ssl->keep_current_message = 1;
-    }
+    // if(ssl->in_remaining==0 )
+    // {
+    //     /* Current message is probably the ServerHelloDone */
+    //     ssl->keep_current_message = 1;
+    // }
     goto exit;
     /*
      *  struct {

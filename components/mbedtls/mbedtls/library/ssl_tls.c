@@ -2738,9 +2738,9 @@ int mbedtls_ssl_fetch_input( mbedtls_ssl_context *ssl, size_t nb_want )
             ssl->in_left += ret;
         }
     }
-    if(ssl->in_msglen!=0) {
-         MBEDTLS_SSL_DEBUG_BUF( 2, "input msg", ssl->in_msg ,ssl->in_msglen);       
-    }
+    // if(ssl->in_msglen!=0) {
+    //      MBEDTLS_SSL_DEBUG_BUF( 2, "input msg", ssl->in_msg ,ssl->in_msglen);       
+    // }
     MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= fetch input" ) );
 
     return( 0 );
@@ -3623,24 +3623,25 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
         return( MBEDTLS_ERR_SSL_INVALID_RECORD );
     }
 
-    if(ssl->in_remaining>0){
+    if(ssl->in_remaining==0){
         // size_t junk_data_length = ssl->in_msglen - ssl->in_remaining;
         // size_t useful_data_length = ssl->in_msglen - ssl->in_remaining;
-        if(ssl->in_msglen - ssl->in_remaining > 0 ){
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "move memroy by %d, %d left",ssl->in_remaining,ssl->in_msglen - ssl->in_remaining));
-        memmove( ssl->in_msg, ssl->in_msg + ssl->in_remaining, ssl->in_msglen - ssl->in_remaining );
-            ssl->in_msglen = ssl->in_msglen - ssl->in_remaining;
-            ssl->in_remaining = 0;
-        }else{ // we dont have useful data here;
-            ssl->in_remaining = ssl->in_msglen - ssl->in_remaining;
-            ssl->in_msglen =0;   
-            return (0);
-        }   
+        // if(ssl->in_msglen - ssl->in_remaining > 0 ){
+        // MBEDTLS_SSL_DEBUG_MSG( 1, ( "move memroy by %d, %d left",ssl->in_remaining,ssl->in_msglen - ssl->in_remaining));
+        // memmove( ssl->in_msg, ssl->in_msg + ssl->in_remaining, ssl->in_msglen - ssl->in_remaining );
+        //     ssl->in_msglen = ssl->in_msglen - ssl->in_remaining;
+        //     ssl->in_remaining = 0;
+        // }else{ // we dont have useful data here;
+        //     ssl->in_remaining = ssl->in_msglen - ssl->in_remaining;
+        //     ssl->in_msglen =0;   
+        //     return (0);
+        // }   
+        ssl->in_hslen = mbedtls_ssl_hs_hdr_len( ssl ) + ssl_get_hs_total_len( ssl );
+        MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake message: msglen ="
+                            " %d, type = %d, hslen = %d ",
+                            ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen));
     }
-    ssl->in_hslen = mbedtls_ssl_hs_hdr_len( ssl ) + ssl_get_hs_total_len( ssl );
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "handshake message: msglen ="
-                        " %d, type = %d, hslen = %d ",
-                        ssl->in_msglen, ssl->in_msg[0], ssl->in_hslen));
+
 
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
@@ -3713,17 +3714,28 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
     else
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
     /* With TLS we don't handle fragmentation (for now) */
-    if( ssl->in_msglen < ssl->in_hslen  )
-    {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS handshake fragmentation not supported" ) );
-        ssl->in_remaining  = ssl->in_hslen - ssl->in_msglen;
-        ssl->in_hslen=0;
-        ssl->in_msglen =0;
-      //  return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-        // TODO : new state , wait for fragment ;
+    if( ssl->in_remaining == 0){
+        if( ssl->in_msglen < ssl->in_hslen  )
+        {
+            MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS handshake fragmentation not supported" ) );
+            ssl->in_remaining  = ssl->in_hslen - ssl->in_msglen;
+            ssl->in_hslen =  ssl->in_msglen;
+            // ssl->in_hslen=0;
+            // ssl->in_msglen =0;
+        //  return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
+            // TODO : new state , wait for fragment ;
+        }
     }else{
-        ssl->in_remaining  = 0;
+        if(ssl->in_remaining > ssl->in_msglen){
+            ssl->in_hslen = ssl->in_msglen;
+            ssl->in_remaining -= ssl->in_msglen;
+        }else{
+            ssl->in_hslen = ssl->in_remaining;
+            ssl->in_remaining = 0;
+        }
+    MBEDTLS_SSL_DEBUG_MSG( 1, ( "receive handshake fragment message: msglen = %d, in_remaining = %d. in_hslen =  %d ",ssl->in_msglen, ssl->in_remaining,ssl->in_hslen));
     }
+
 
     return( 0 );
 }
@@ -3734,7 +3746,9 @@ void mbedtls_ssl_update_handshake_status( mbedtls_ssl_context *ssl )
 
     if( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER && hs != NULL )
     {
-        ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen );
+         MBEDTLS_SSL_DEBUG_MSG( 1, ( " update_checksum in_hslen =  %d ", ssl->in_hslen));
+   
+        ssl->handshake->update_checksum( ssl, ssl->in_msg, ssl->in_hslen ); //TODO : something to do with checksum?
     }
 
     /* Handshake message is complete, increment counter */
@@ -4376,7 +4390,8 @@ int mbedtls_ssl_read_record( mbedtls_ssl_context *ssl,
                 }
             }
 
-            ret = mbedtls_ssl_handle_message_type( ssl ); // this returns fatal
+            ret = mbedtls_ssl_handle_message_type( ssl ); // this returns fatal 
+                                                        //TODO: this corrupts the hash 
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
             if( ret == MBEDTLS_ERR_SSL_EARLY_MESSAGE )
@@ -4814,7 +4829,10 @@ static int ssl_consume_current_message( mbedtls_ssl_context *ssl )
          *     bounds after handling a DTLS message with an unexpected
          *     sequence number, see mbedtls_ssl_prepare_handshake_record.
          */
-        if( ssl->in_hslen < ssl->in_msglen )
+
+        MBEDTLS_SSL_DEBUG_MSG( 1, ("ssl_consume_current_message in_msglen %d , in_hslen %d , in_remaining %d ",
+                                   ssl->in_msglen, ssl->in_hslen, ssl->in_remaining));
+        if( ssl->in_hslen < ssl->in_msglen )  //TODO:  fix fragment here
         {
             ssl->in_msglen -= ssl->in_hslen;
             memmove( ssl->in_msg, ssl->in_msg + ssl->in_hslen,
