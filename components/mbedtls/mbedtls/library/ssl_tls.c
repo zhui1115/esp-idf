@@ -3720,11 +3720,7 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
             MBEDTLS_SSL_DEBUG_MSG( 1, ( "TLS handshake fragmentation not supported" ) );
             ssl->in_remaining  = ssl->in_hslen - ssl->in_msglen;
             ssl->in_hslen =  ssl->in_msglen;
-            // ssl->in_hslen=0;
-            // ssl->in_msglen =0;
-        //  return( MBEDTLS_ERR_SSL_FEATURE_UNAVAILABLE );
-            // TODO : new state , wait for fragment ;
-        }
+         }
     }else{
         if(ssl->in_remaining > ssl->in_msglen){
             ssl->in_hslen = ssl->in_msglen;
@@ -3733,7 +3729,7 @@ int mbedtls_ssl_prepare_handshake_record( mbedtls_ssl_context *ssl )
             ssl->in_hslen = ssl->in_remaining;
             ssl->in_remaining = 0;
         }
-    MBEDTLS_SSL_DEBUG_MSG( 1, ( "receive handshake fragment message: msglen = %d, in_remaining = %d. in_hslen =  %d ",ssl->in_msglen, ssl->in_remaining,ssl->in_hslen));
+   // MBEDTLS_SSL_DEBUG_MSG( 2, ( "receive handshake fragment message: msglen = %d, in_remaining = %d. in_hslen =  %d ",ssl->in_msglen, ssl->in_remaining,ssl->in_hslen));
     }
 
 
